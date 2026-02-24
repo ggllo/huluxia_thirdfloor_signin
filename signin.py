@@ -144,6 +144,23 @@ class HuluxiaSignin:
         _md5.update(text.encode())
         return _md5.hexdigest()
 
+    # 昵称打码
+    def mask_nickname(self, nickname: str) -> str:
+        """
+        对昵称进行打码处理
+        :param nickname: 原始昵称
+        :return: 打码后的昵称
+        """
+        if len(nickname) > 2:
+            # 大于两个字，保留首尾，中间打码
+            return nickname[0] + '*' * (len(nickname) - 2) + nickname[-1]
+        elif len(nickname) == 2:
+            # 只有两个字，只保留后一个字
+            return '*' + nickname[-1]
+        else:
+            # 单个字或空，直接返回
+            return nickname
+
     # 时间戳
     def timestamp(self) -> int:
         # 原 int(round(time.time() * 1000)) 易出现参数错误
@@ -175,7 +192,8 @@ class HuluxiaSignin:
         # 初始化通知信息
         self.set_config(acc, psd)
         info = self.user_info()
-        initial_msg = f'正在为{info[0]}签到\n等级：Lv.{info[1]}\n经验值：{info[2]}/{info[3]}'
+        masked_nickname = self.mask_nickname(info[0])
+        initial_msg = f'正在为{masked_nickname}签到\n等级：Lv.{info[1]}\n经验值：{info[2]}/{info[3]}'
         logger.info(initial_msg)
 
         # 获取通知类型
@@ -239,7 +257,7 @@ class HuluxiaSignin:
             time.sleep(3)
 
         # 汇总签到结果
-        summary_msg = f'本次为{info[0]}签到共获得：{total_exp} 经验值'
+        summary_msg = f'本次为{masked_nickname}签到共获得：{total_exp} 经验值'
         if notifier_type == "wechat":
             self.notifier.send(summary_msg)  # 微信即时发送
         elif notifier_type == "email":
@@ -248,7 +266,8 @@ class HuluxiaSignin:
 
         # 完成签到后的用户信息
         final_info = self.user_info()
-        final_msg = f'已为{final_info[0]}完成签到\n等级：Lv.{final_info[1]}\n经验值：{final_info[2]}/{final_info[3]}\n已连续签到 {self.signin_continue_days} 天\n'
+        masked_final_nickname = self.mask_nickname(final_info[0])
+        final_msg = f'已为{masked_final_nickname}完成签到\n等级：Lv.{final_info[1]}\n经验值：{final_info[2]}/{final_info[3]}\n已连续签到 {self.signin_continue_days} 天\n'
         remaining_days = (int(final_info[3]) - int(final_info[2])) // total_exp + 1 if total_exp else "未知"
         final_msg += f'还需签到 {remaining_days} 天'
         if notifier_type == "wechat":
